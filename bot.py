@@ -13,7 +13,7 @@ async def lock(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if update.effective_user and update.effective_user.id == OWNER_ID:
         locked = True
-        await update.message.reply_text("🔒 Lock فعال شد.")
+        await update.message.reply_text("🔒 کانال قفل شد.\nهمه پست‌های جدید پاک می‌شوند.")
 
 
 async def unlock(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -21,34 +21,36 @@ async def unlock(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if update.effective_user and update.effective_user.id == OWNER_ID:
         locked = False
-        await update.message.reply_text("🔓 Unlock فعال شد.")
+        await update.message.reply_text("🔓 کانال آزاد شد.")
 
 
-async def inspect_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message = update.channel_post
-
-    if not message:
+async def delete_channel_posts(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not locked:
         return
 
-    # اطلاعاتی که تلگرام برای نویسنده پست به ربات داده
-    print("========== CHANNEL POST ==========")
-    print("Message ID:", message.message_id)
-    print("Author signature:", repr(message.author_signature))
-    print("Sender chat:", message.sender_chat)
-    print("==================================")
+    message = update.channel_post
+
+    if message:
+        try:
+            await context.bot.delete_message(
+                chat_id=message.chat.id,
+                message_id=message.message_id
+            )
+            print(f"Deleted message {message.message_id}")
+        except Exception as e:
+            print(f"Delete error: {e}")
 
 
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
+    # کنترل ربات فقط توسط صاحب ربات
     app.add_handler(CommandHandler("lock", lock))
     app.add_handler(CommandHandler("unlock", unlock))
 
+    # دریافت پست‌های کانال
     app.add_handler(
-        MessageHandler(
-            filters.UpdateType.CHANNEL_POST,
-            inspect_channel_post
-        )
+        MessageHandler(filters.UpdateType.CHANNEL_POST, delete_channel_posts)
     )
 
     print("Bot is running...")
